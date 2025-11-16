@@ -19,9 +19,9 @@ export async function runPoseDetectionOnVideo(videoEl, canvasEl, statusEl, poseR
     },
     runningMode: "VIDEO",
     numPoses: 1,
-    minPoseDetectionConfidence: 0.5,
-    minPosePresenceConfidence: 0.5,
-    minTrackingConfidence: 0.5,
+    minPoseDetectionConfidence: 0.9,
+    minPosePresenceConfidence: 0.9,
+    minTrackingConfidence: 0.9,
     outputSegmentationMasks: false
   });
 

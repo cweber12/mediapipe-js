@@ -25,10 +25,17 @@
             <span id="status">Loading pose model…</span>
         </div>
 
-        <div class="video-container">
-            <video id="video" controls></video>
+        <div id="videoCropContainer" style="position:relative; display:inline-block; max-width:65%;">
+            <video id="video" controls style="max-width:100%;"></video>
             <canvas id="overlay"></canvas>
+            <div id="cropBox" class="crop-box" style="position:absolute;" hidden>
+                <div class="resize-handle" data-corner="nw"></div>
+                <div class="resize-handle" data-corner="ne"></div>
+                <div class="resize-handle" data-corner="sw"></div>
+                <div class="resize-handle" data-corner="se"></div>
+            </div>
         </div>
+
         <div id="frameNav" style="display:none; margin-top:1rem;">
             <button id="prevFrameBtn">Previous</button>
             <span id="frameCounter"></span>
