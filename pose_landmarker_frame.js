@@ -11,17 +11,12 @@ import { VideoFrameExtractor } from './video_frame_extractor.js';
 export async function runPoseDetectionOnFrames(
     videoEl, canvasEl, statusEl, poseResults, intervalSeconds, frameNav, frameCounter, cropRect
 ) {
-    // Initialize frame extractor
     const extractor = new VideoFrameExtractor(videoEl, canvasEl);
-    // Extract frames at specified interval
     const frameDataUrls = await extractor.extractFrames(intervalSeconds);
-    console.log('Extracted frames:', frameDataUrls.length);
 
-    // Load pose model in IMAGE mode
     const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
     );
-    // Create PoseLandmarker instance
     const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
             modelAssetPath:
@@ -29,22 +24,15 @@ export async function runPoseDetectionOnFrames(
             delegate: "GPU"
         },
         runningMode: "IMAGE",
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.9,
-        minPosePresenceConfidence: 0.9,
-        minTrackingConfidence: 0.9,
-        outputSegmentationMasks: false
+        numPoses: 1
     });
 
-    // Clear previous results
     poseResults.length = 0;
     let currentFrameIdx = 0;
-
-    // Track crop for subsequent frames
     let crop = cropRect ? { ...cropRect } : null;
 
-    // Run pose detection on each frame
-    for (const frameUrl of frameDataUrls) {
+    for (let i = 0; i < frameDataUrls.length; i++) {
+        const frameUrl = frameDataUrls[i];
         const img = new Image();
         img.src = frameUrl;
         await new Promise(resolve => { img.onload = resolve; });
@@ -76,33 +64,61 @@ export async function runPoseDetectionOnFrames(
         // For subsequent frames, center crop on hip midpoint
         if (crop && result.landmarks && result.landmarks.length > 0) {
             const landmarkSet = result.landmarks[0];
-            // Find left and right hip indices
-            const leftHipIdx = PoseLandmarker.LANDMARK_NAMES.indexOf('left_hip');
-            const rightHipIdx = PoseLandmarker.LANDMARK_NAMES.indexOf('right_hip');
+            const leftHipIdx = 23;
+            const rightHipIdx = 24;
             if (landmarkSet[leftHipIdx] && landmarkSet[rightHipIdx]) {
-                const centerX = ((landmarkSet[leftHipIdx].x + landmarkSet[rightHipIdx].x) / 2) * croppedImg.width;
-                const centerY = ((landmarkSet[leftHipIdx].y + landmarkSet[rightHipIdx].y) / 2) * croppedImg.height;
-                crop.left = Math.max(0, Math.round(centerX - crop.width / 2));
-                crop.top = Math.max(0, Math.round(centerY - crop.height / 2));
+                const centerX = ((landmarkSet[leftHipIdx].x + landmarkSet[rightHipIdx].x) / 2) * crop.width;
+                const centerY = ((landmarkSet[leftHipIdx].y + landmarkSet[rightHipIdx].y) / 2) * crop.height;
+                crop.left = Math.max(0, Math.round(crop.left + centerX - crop.width / 2));
+                crop.top = Math.max(0, Math.round(crop.top + centerY - crop.height / 2));
             }
         }
 
-        // Draw landmarks on cropped canvas
+        // Draw landmarks on original frame canvas, offset by crop
+        canvasEl.width = img.width;
+        canvasEl.height = img.height;
+        const ctx = canvasEl.getContext('2d');
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+
         if (result.landmarks && result.landmarks.length > 0) {
-            const drawingUtils = new DrawingUtils(croppedCtx);
             for (const landmarkSet of result.landmarks) {
-                drawingUtils.drawLandmarks(landmarkSet, {
-                    radius: (data) => DrawingUtils.lerp(data.from.z, -0.15, 0.1, 5, 1)
+                // Offset each landmark by crop.left/crop.top
+                const offsetLandmarks = landmarkSet.map(lm => ({
+                    ...lm,
+                    x: (lm.x * crop.width + crop.left) / img.width,
+                    y: (lm.y * crop.height + crop.top) / img.height
+                }));
+                // Draw on original frame
+                offsetLandmarks.forEach(lm => {
+                    ctx.beginPath();
+                    ctx.arc(lm.x * img.width, lm.y * img.height, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'lime';
+                    ctx.fill();
                 });
-                drawingUtils.drawConnectors(
-                    landmarkSet,
-                    PoseLandmarker.POSE_CONNECTIONS,
-                    { color: 'lime', lineWidth: 4 }
-                );
+                // Optionally, draw connectors (lines between landmarks)
+                // You can use PoseLandmarker.POSE_CONNECTIONS and draw lines between offsetLandmarks
             }
+            // Save landmark data with original frame coordinates
+            poseResults.push({
+                frameIdx: i,
+                frameUrl,
+                landmarks: result.landmarks.map(landmarkSet =>
+                    landmarkSet.map(lm => ({
+                        x: lm.x * crop.width + crop.left,
+                        y: lm.y * crop.height + crop.top,
+                        z: lm.z,
+                        visibility: lm.visibility
+                    }))
+                )
+            });
+        } else {
+            poseResults.push({
+                frameIdx: i,
+                frameUrl,
+                landmarks: []
+            });
         }
-        const processedFrameUrl = croppedCanvas.toDataURL();
-        poseResults.push({ frameUrl: processedFrameUrl, landmarks: result.landmarks });
     }
 
     // Frame navigation
@@ -117,7 +133,18 @@ export async function runPoseDetectionOnFrames(
             canvasEl.height = img.height;
             const ctx = canvasEl.getContext('2d');
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-            ctx.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            // Draw landmarks for this frame
+            if (frameData.landmarks && frameData.landmarks.length > 0) {
+                frameData.landmarks.forEach(landmarkSet => {
+                    landmarkSet.forEach(lm => {
+                        ctx.beginPath();
+                        ctx.arc(lm.x, lm.y, 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'lime';
+                        ctx.fill();
+                    });
+                });
+            }
             frameCounter.textContent = `Frame ${currentFrameIdx + 1} / ${poseResults.length}`;
         };
     }
