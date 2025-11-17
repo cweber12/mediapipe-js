@@ -1,6 +1,7 @@
 // pose_landmarker_frame.js
 // Pose detection on extracted frames
 
+// Import MediaPipe Tasks Vision bundle
 import {
     FilesetResolver,
     PoseLandmarker, 
@@ -8,10 +9,13 @@ import {
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js";
 import { VideoFrameExtractor } from './video_frame_extractor.js';
 
+// Run pose detection on extracted video frames at specified interval
 export async function runPoseDetectionOnFrames(
     videoEl, canvasEl, statusEl, poseResults, intervalSeconds, frameNav, frameCounter, cropRect
 ) {
-    const extractor = new VideoFrameExtractor(videoEl, canvasEl);
+    
+    
+    const extractor = new VideoFrameExtractor(videoEl, canvasEl); 
     const frameDataUrls = await extractor.extractFrames(intervalSeconds);
 
     const vision = await FilesetResolver.forVisionTasks(
@@ -66,11 +70,20 @@ export async function runPoseDetectionOnFrames(
             const landmarkSet = result.landmarks[0];
             const leftHipIdx = 23;
             const rightHipIdx = 24;
+            // Center crop on hip midpoint if hips are detected
             if (landmarkSet[leftHipIdx] && landmarkSet[rightHipIdx]) {
-                const centerX = ((landmarkSet[leftHipIdx].x + landmarkSet[rightHipIdx].x) / 2) * crop.width;
-                const centerY = ((landmarkSet[leftHipIdx].y + landmarkSet[rightHipIdx].y) / 2) * crop.height;
-                crop.left = Math.max(0, Math.round(crop.left + centerX - crop.width / 2));
-                crop.top = Math.max(0, Math.round(crop.top + centerY - crop.height / 2));
+                // Get hip center in cropped frame (normalized coordinates)
+                const centerX_cropped = (landmarkSet[leftHipIdx].x + landmarkSet[rightHipIdx].x) / 2;
+                const centerY_cropped = (landmarkSet[leftHipIdx].y + landmarkSet[rightHipIdx].y) / 2;
+                // Convert to original frame coordinates
+                const centerX_original = crop.left + centerX_cropped * crop.width;
+                const centerY_original = crop.top + centerY_cropped * crop.height;
+                // Update crop box for next frame, centered on hip center in original frame
+                crop.left = Math.max(0, Math.round(centerX_original - crop.width / 2));
+                crop.top = Math.max(0, Math.round(centerY_original - crop.height / 2));
+                // Clamp crop to stay within original frame bounds
+                crop.left = Math.min(crop.left, img.width - crop.width);
+                crop.top = Math.min(crop.top, img.height - crop.height);
             }
         }
 
@@ -96,8 +109,14 @@ export async function runPoseDetectionOnFrames(
                     ctx.fillStyle = 'lime';
                     ctx.fill();
                 });
-                // Optionally, draw connectors (lines between landmarks)
-                // You can use PoseLandmarker.POSE_CONNECTIONS and draw lines between offsetLandmarks
+                // Draw connectors
+                const drawingUtils = new DrawingUtils(ctx);
+                drawingUtils.drawConnectors(
+                    offsetLandmarks,
+                    PoseLandmarker.POSE_CONNECTIONS,
+                    { color: 'lime', lineWidth: 2 }
+                );
+
             }
             // Save landmark data with original frame coordinates
             poseResults.push({
@@ -137,12 +156,27 @@ export async function runPoseDetectionOnFrames(
             // Draw landmarks for this frame
             if (frameData.landmarks && frameData.landmarks.length > 0) {
                 frameData.landmarks.forEach(landmarkSet => {
+                    // Draw circles (pixel coordinates)
                     landmarkSet.forEach(lm => {
                         ctx.beginPath();
                         ctx.arc(lm.x, lm.y, 4, 0, 2 * Math.PI);
                         ctx.fillStyle = 'lime';
                         ctx.fill();
                     });
+                    // Prepare normalized landmarks for connectors
+                    const normalizedLandmarks = landmarkSet.map(lm => ({
+                        x: lm.x / canvasEl.width,
+                        y: lm.y / canvasEl.height,
+                        z: lm.z,
+                        visibility: lm.visibility
+                    }));
+                    // Draw connectors using normalized coordinates
+                    const drawingUtils = new DrawingUtils(ctx);
+                    drawingUtils.drawConnectors(
+                        normalizedLandmarks,
+                        PoseLandmarker.POSE_CONNECTIONS,
+                        { color: 'lime', lineWidth: 2 }
+                    );
                 });
             }
             frameCounter.textContent = `Frame ${currentFrameIdx + 1} / ${poseResults.length}`;

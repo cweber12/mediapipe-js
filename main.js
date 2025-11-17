@@ -28,8 +28,22 @@ const poseResults = [];
 videoEl.addEventListener('loadedmetadata', () => {
   videoDetectBtn.disabled = false;
   frameDetectBtn.disabled = false;
+  // Adjust  canvas pixel buffer size
   canvasEl.width = videoEl.videoWidth;
   canvasEl.height = videoEl.videoHeight;
+  canvasEl.style.position = 'absolute';
+  canvasEl.style.left = videoEl.offsetLeft + 'px';
+  canvasEl.style.top = videoEl.offsetTop + 'px';
+  canvasEl.style.pointerEvents = 'none'; // allow clicks to pass through to video
+  
+  // Set canvas and crop box size to match video display size
+  const videoRect = videoEl.getBoundingClientRect();
+  // Adjust canvas display size
+  canvasEl.style.width = videoRect.width + 'px';
+  canvasEl.style.height = videoRect.height + 'px';
+  cropBoxEl.style.width = videoRect.width + 'px';
+  cropBoxEl.style.height = videoRect.height + 'px';
+  
   statusEl.textContent = "Video loaded. Choose detection mode.";
 });
 
