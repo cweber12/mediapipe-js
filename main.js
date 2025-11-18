@@ -86,8 +86,6 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
   cropBoxEl.hidden = false;
   cropBoxEl.style.left = '0px';
   cropBoxEl.style.top = '0px';
-  cropBoxEl.style.width = videoEl.videoWidth + 'px';
-  cropBoxEl.style.height = videoEl.videoHeight + 'px';
   setupCropBox(videoEl, cropBoxEl);
 
   statusEl.textContent = "Adjust crop box, then click Detect from Frames again to confirm crop and start detection.";
@@ -95,16 +93,32 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
   // Replace this handler with a one-time confirm handler
   frameDetectBtn.removeEventListener('click', handleFrameDetect);
   frameDetectBtn.addEventListener('click', async function confirmCropHandler() {
+    // Hide crop box
     cropBoxEl.hidden = true;
+    
+    // Get crop rectangle in video pixel coordinates
+    const videoRect = videoEl.getBoundingClientRect();
+    // Calculate scale between displayed video size and actual video size
+    const scaleX = videoEl.videoWidth  / videoRect.width;
+    // Calculate scale between displayed video size and actual video size
+    const scaleY = videoEl.videoHeight / videoRect.height;
+
+    // Calculate crop rectangle in video pixel coordinates
     const cropRect = {
-      left: parseInt(cropBoxEl.style.left, 10),
-      top: parseInt(cropBoxEl.style.top, 10),
-      width: parseInt(cropBoxEl.style.width, 10),
-      height: parseInt(cropBoxEl.style.height, 10)
+      left:   Math.round(parseInt(cropBoxEl.style.left, 10)   * scaleX),
+      top:    Math.round(parseInt(cropBoxEl.style.top, 10)    * scaleY),
+      width:  Math.round(parseInt(cropBoxEl.style.width, 10)  * scaleX),
+      height: Math.round(parseInt(cropBoxEl.style.height, 10) * scaleY)
     };
+
+    // Get interval n
     const n = parseInt(intervalInput.value, 10) || 1;
+    // Clear previous results
     poseResults.length = 0;
+    // Disable download button until results are ready
     downloadBtn.disabled = true;
+
+    // Run pose detection on frames with cropping
     await runPoseDetectionOnFrames(
       videoEl,
       canvasEl,
@@ -115,9 +129,11 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
       frameCounter,
       cropRect
     );
+
     downloadBtn.disabled = poseResults.length === 0;
     frameDetectBtn.removeEventListener('click', confirmCropHandler);
     frameDetectBtn.addEventListener('click', handleFrameDetect);
+
   }, { once: true });
 });
 

@@ -11,9 +11,10 @@ export class VideoFrameExtractor {
     async extractFrames(n, processFrameCallback) {
         // Check if video is loaded
         if (!this.videoEl.src) throw new Error('No video loaded');
+
         // Get video duration
         const duration = this.videoEl.duration;
-        const frames = [];
+
         // Loop through video duration in steps of n seconds
         for (let t = 0; t < duration; t += n) {
             // Seek to time t and draw frame to canvas
@@ -21,12 +22,10 @@ export class VideoFrameExtractor {
                 // Seek video to time t
                 this.videoEl.currentTime = t; 
                 // When seeked, draw frame to canvas
-                this.videoEl.onseeked = () => {
+                this.videoEl.onseeked = async () => {
                     // Set canvas size to video size
-                    this.canvasEl.width = this.videoEl.videoWidth;
-                    // Set canvas height to video height                
+                    this.canvasEl.width = this.videoEl.videoWidth;              
                     this.canvasEl.height = this.videoEl.videoHeight;
-                    // Draw video frame to canvas
                     const ctx = this.canvasEl.getContext('2d');
                     ctx.drawImage(
                         this.videoEl, 
@@ -36,17 +35,21 @@ export class VideoFrameExtractor {
                     );
                     // Get frame data URL
                     const frameDataUrl = this.canvasEl.toDataURL();
-                    // Call the callback with frame data to process
-                    if (processFrameCallback) {
-                        processFrameCallback(
-                            frameDataUrl, 
-                            t, 
-                            this.canvasEl.width, 
-                            this.canvasEl.height
-                        );
+                    try {
+                        // Call the callback with frame data to process
+                        if (processFrameCallback) {
+                            await processFrameCallback(
+                                frameDataUrl, 
+                                t, 
+                                this.canvasEl.width, 
+                                this.canvasEl.height
+                            );
+                        }
+                        // Resolve promise to continue loop
+                        resolve();
+                    } catch (err) {
+                        reject(err);
                     }
-                    // Resolve promise to continue loop
-                    resolve();
                 };
                 this.videoEl.onerror = reject;
             });
