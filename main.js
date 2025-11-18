@@ -28,23 +28,33 @@ const poseResults = [];
 videoEl.addEventListener('loadedmetadata', () => {
   videoDetectBtn.disabled = false;
   frameDetectBtn.disabled = false;
-  // Adjust  canvas pixel buffer size
+
+  // Adjust canvas pixel buffer size
   canvasEl.width = videoEl.videoWidth;
   canvasEl.height = videoEl.videoHeight;
   canvasEl.style.position = 'absolute';
-  canvasEl.style.left = videoEl.offsetLeft + 'px';
-  canvasEl.style.top = videoEl.offsetTop + 'px';
+  canvasEl.style.left = '0px';
+  canvasEl.style.top = '0px';
   canvasEl.style.pointerEvents = 'none'; // allow clicks to pass through to video
-  
+
   // Set canvas and crop box size to match video display size
   const videoRect = videoEl.getBoundingClientRect();
-  // Adjust canvas display size
   canvasEl.style.width = videoRect.width + 'px';
   canvasEl.style.height = videoRect.height + 'px';
   cropBoxEl.style.width = videoRect.width + 'px';
   cropBoxEl.style.height = videoRect.height + 'px';
-  
+  cropBoxEl.style.left = '0px';
+  cropBoxEl.style.top = '0px';
+
   statusEl.textContent = "Video loaded. Choose detection mode.";
+});
+
+window.addEventListener('resize', () => {
+  const videoRect = videoEl.getBoundingClientRect();
+  canvasEl.style.width = videoRect.width + 'px';
+  canvasEl.style.height = videoRect.height + 'px';
+  cropBoxEl.style.width = videoRect.width + 'px';
+  cropBoxEl.style.height = videoRect.height + 'px';
 });
 
 videoFileInput.addEventListener('change', (e) => {
@@ -65,12 +75,12 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
   videoEl.style.display = '';
   videoEl.style.position = 'relative';
 
-  // Wait for video metadata to be loaded
-  if (videoEl.readyState < 1) {
-    await new Promise(resolve => {
-      videoEl.onloadedmetadata = resolve;
-    });
-  }
+  // Pause video and seek to first frame
+  videoEl.pause();
+  videoEl.currentTime = 0;
+  await new Promise(resolve => {
+    videoEl.onseeked = resolve;
+  });
 
   // Show crop box over video
   cropBoxEl.hidden = false;

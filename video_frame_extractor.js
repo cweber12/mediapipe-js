@@ -7,26 +7,49 @@ export class VideoFrameExtractor {
         this.canvasEl = canvasEl; // HTMLCanvasElement
     }
 
-    // Extract frames every n seconds
-    async extractFrames(n) {
+    // Extract frames every n secons and process each frame with a callback
+    async extractFrames(n, processFrameCallback) {
+        // Check if video is loaded
         if (!this.videoEl.src) throw new Error('No video loaded');
+        // Get video duration
         const duration = this.videoEl.duration;
         const frames = [];
+        // Loop through video duration in steps of n seconds
         for (let t = 0; t < duration; t += n) {
+            // Seek to time t and draw frame to canvas
             await new Promise((resolve, reject) => {
-                this.videoEl.currentTime = t;
+                // Seek video to time t
+                this.videoEl.currentTime = t; 
+                // When seeked, draw frame to canvas
                 this.videoEl.onseeked = () => {
+                    // Set canvas size to video size
                     this.canvasEl.width = this.videoEl.videoWidth;
+                    // Set canvas height to video height                
                     this.canvasEl.height = this.videoEl.videoHeight;
+                    // Draw video frame to canvas
                     const ctx = this.canvasEl.getContext('2d');
-                    ctx.drawImage(this.videoEl, 0, 0, this.canvasEl.width, this.canvasEl.height);
-                    // You can clone the canvas or get the image data here
-                    frames.push(this.canvasEl.toDataURL());
+                    ctx.drawImage(
+                        this.videoEl, 
+                        0, 0, 
+                        this.canvasEl.width, 
+                        this.canvasEl.height
+                    );
+                    // Get frame data URL
+                    const frameDataUrl = this.canvasEl.toDataURL();
+                    // Call the callback with frame data to process
+                    if (processFrameCallback) {
+                        processFrameCallback(
+                            frameDataUrl, 
+                            t, 
+                            this.canvasEl.width, 
+                            this.canvasEl.height
+                        );
+                    }
+                    // Resolve promise to continue loop
                     resolve();
                 };
                 this.videoEl.onerror = reject;
             });
         }
-        return frames; // Array of data URLs for each frame
     }
 }
