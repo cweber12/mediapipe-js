@@ -1,5 +1,9 @@
 // pose_landmarker_video.js
 // Pose detection on video playback, overlaying landmarks in real time
+// Notes: 
+// - Not currently implemented in main.js. 
+// - Slightly faster but much less accurate than detecting on extracted frames. 
+// - May be useful for future applications needing real-time feedback.
 import {
   FilesetResolver,
   PoseLandmarker,

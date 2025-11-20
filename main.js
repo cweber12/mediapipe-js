@@ -1,32 +1,41 @@
 // main.js
 // Main entry point: choose mode and run pose detection
-import { runPoseDetectionOnVideo } from './pose_landmarker_video.js';
+//import { runPoseDetectionOnVideo } from './pose_landmarker_video.js';
 import { runPoseDetectionOnFrames } from './pose_landmarker_frame.js';
 import { VideoFrameExtractor } from './video_frame_extractor.js';
 import { setupCropBox } from './setup_crop_box.js';
 
-// DOM elements
-const videoFileInput = document.getElementById('videoFile');
-const videoEl        = document.getElementById('video');
-const canvasEl       = document.getElementById('overlay');
-const videoDetectBtn = document.getElementById('videoDetectBtn');
+// DOM ELEMENTS
+//-------------------------------------------------------------
+// File input for video
+const videoFileInput = document.getElementById('videoFile'); 
+// HTML video element 
+const videoEl = document.getElementById('video');
+// Overlay canvas for drawing landmarks
+const canvasEl = document.getElementById('overlay');
+// Frame detection button
 const frameDetectBtn = document.getElementById('frameDetectBtn');
-const stopBtn        = document.getElementById('stopBtn');
-const downloadBtn    = document.getElementById('downloadBtn');
-const statusEl       = document.getElementById('status');
-const intervalInput  = document.getElementById('intervalInput');
-const intervalLabel  = document.getElementById('intervalLabel');
-const frameNav       = document.getElementById('frameNav');
-const frameCounter   = document.getElementById('frameCounter');
-const cropBoxEl      = document.getElementById('cropBox');
+// Download button for results
+const downloadBtn = document.getElementById('downloadBtn');
+// Status display element
+const statusEl = document.getElementById('status');
+// Interval input for frame extraction
+const intervalInput = document.getElementById('intervalInput');
+// Element contianing prev/next frame buttons and counter
+const frameNav = document.getElementById('frameNav');
+// Displays current frame number in frameNav
+const frameCounter = document.getElementById('frameCounter');
+// Crop box element to select ROI to detect within
+const cropBoxEl = document.getElementById('cropBox');
 
 // Results
 const poseResults = [];
 
-// Mode selection logic
+// EVENT LISTENERS
+//-------------------------------------------------------------
 
+// Video loaded metadata event
 videoEl.addEventListener('loadedmetadata', () => {
-  videoDetectBtn.disabled = false;
   frameDetectBtn.disabled = false;
 
   // Adjust canvas pixel buffer size
@@ -46,38 +55,43 @@ videoEl.addEventListener('loadedmetadata', () => {
   cropBoxEl.style.left = '0px';
   cropBoxEl.style.top = '0px';
 
-  statusEl.textContent = "Video loaded. Choose detection mode.";
+  statusEl.textContent = "Video loaded. Click \"Detect Pose Landmarks\" to start.";
 });
 
+// Window resize event to adjust canvas and crop box size
 window.addEventListener('resize', () => {
+  // Adjust canvas and crop box size to match video display size
   const videoRect = videoEl.getBoundingClientRect();
+  // Set canvas and crop box size to match video display size
   canvasEl.style.width = videoRect.width + 'px';
   canvasEl.style.height = videoRect.height + 'px';
   cropBoxEl.style.width = videoRect.width + 'px';
   cropBoxEl.style.height = videoRect.height + 'px';
 });
 
+// Video file input change event
 videoFileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const file = e.target.files[0]; // Selected video file
+  if (!file) return; // No file selected
   // Set video source to selected file
-  const url = URL.createObjectURL(file);
-  videoEl.src = url;
-  videoDetectBtn.disabled = true;
-  frameDetectBtn.disabled = true;
-  statusEl.textContent = "Loading video...";
+  const url = URL.createObjectURL(file); // Create object URL for the file
+  videoEl.src = url; // Set video element source to the file URL
+  frameDetectBtn.disabled = true; // Disable frame detect button until video is loaded
+  statusEl.textContent = "Loading video..."; // Update status
 });
 
+// Frame detection button click event
 frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
-  intervalLabel.style.display = '';
-  frameNav.style.display = 'none';
-  canvasEl.style.display = '';
-  videoEl.style.display = '';
-  videoEl.style.position = 'relative';
+  frameNav.style.display = 'none'; // Hide frame navigation
+  canvasEl.style.display = ''; // Show canvas
+  videoEl.style.display = ''; // Show video
+  videoEl.style.position = 'relative'; // Ensure video is positioned for overlay
 
   // Pause video and seek to first frame
-  videoEl.pause();
-  videoEl.currentTime = 0;
+  videoEl.pause(); // Pause video playback
+  videoEl.currentTime = 0; // Seek to first frame
+
+  // Wait for seek operation to complete
   await new Promise(resolve => {
     videoEl.onseeked = resolve;
   });
@@ -88,11 +102,13 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
   cropBoxEl.style.top = '0px';
   setupCropBox(videoEl, cropBoxEl);
 
-  statusEl.textContent = "Adjust crop box, then click Detect from Frames again to confirm crop and start detection.";
+  // Update status
+  statusEl.textContent = "Adjust crop box, set interval, then click \"Detect Pose Landmarks\" again to confirm crop and start detection.";
 
   // Replace this handler with a one-time confirm handler
   frameDetectBtn.removeEventListener('click', handleFrameDetect);
   frameDetectBtn.addEventListener('click', async function confirmCropHandler() {
+    
     // Hide crop box
     cropBoxEl.hidden = true;
     
@@ -136,28 +152,6 @@ frameDetectBtn.addEventListener('click', async function handleFrameDetect() {
 
   }, { once: true });
 });
-
-videoDetectBtn.addEventListener('click', () => {
-  intervalLabel.style.display = 'none';
-  frameNav.style.display = 'none';
-  canvasEl.style.display = '';
-  canvasEl.style.position = 'absolute'; 
-  videoEl.style.display = '';
-  runVideoDetection();
-});
-
-async function runVideoDetection() {
-    await runPoseDetectionOnVideo(
-        videoEl, 
-        canvasEl, 
-        statusEl, 
-        poseResults, 
-        videoDetectBtn, 
-        stopBtn, 
-        downloadBtn
-    );
-
-}
 
 async function runFrameDetection() {
     const n = parseInt(intervalInput.value, 10) || 1;

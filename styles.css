@@ -4,31 +4,37 @@ html {
     background-attachment: fixed;
     min-height: 100vh;
     min-width: 100vw; 
-
 }
 
 body {
     display: flex; 
     flex-direction: column; 
     align-items: center;
-    justify-content: flex-start; 
-    font-family: system-ui, sans-serif;
+    justify-content: center; 
+    font-family:'Courier New', Courier, monospace;
+    font-size: 18px;
     margin: 24px;
-    color: #eee;   
-}
-
-.main {
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: flex-start; 
-    width: 80vw;
+    color: white;   
 }
 
 h1 {
     font-size: 32px;
     margin-bottom: 24px; 
-    text-align: center; 
+    text-align: center;
+    text-decoration: underline;
+    margin: 0;  
+}
+
+.main-wrapper {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    justify-content: flex-start; 
+    width: 80vw; 
+    background: white; 
+    color: black;
+    padding: 24px 48px;
+    box-sizing: border-box;
 }
 
 .card {
@@ -36,11 +42,12 @@ h1 {
     flex-direction: column; 
     align-items: center;
     justify-content: flex-start;
+    box-sizing: border-box;
     background: white; 
     color: black; 
     padding: 24px; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 24px; 
+    margin: 24px 0px; 
     width : 100%; 
     
 }
@@ -64,15 +71,16 @@ input[type="file"] {
     color: #eee;
 }
 
-#status {
-    font-size: 0.85rem;
-    opacity: 0.8;
+.status {
+    font-size: 18px;
+    margin: 24px 0;
+    font-weight: bold;
 }
 
 .controls {
     display: flex; 
     flex-direction: row; 
-    justify-content: center; 
+    justify-content: flex-start; 
     align-items: center;
     gap: 16px;
     background: rgb(146, 155, 136); 
@@ -151,8 +159,9 @@ canvas {
     flex-direction: row;
     justify-content: flex-start; 
     align-items: center; 
-    width: fit-content;  
+    width: 100%; 
     gap: 16px;
+    
 }
 
 .column { 
@@ -160,6 +169,5 @@ canvas {
     flex-direction: column; 
     justify-content: flex-start;
     align-items: center;
-    gap: 16px;
 }
 

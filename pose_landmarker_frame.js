@@ -212,5 +212,5 @@ export async function runPoseDetectionOnFrames(
         if (currentFrameIdx < poseResults.length - 1) showFrame(currentFrameIdx + 1);
     };
 
-    statusEl.textContent = "Finished frame-based pose detection.";
+    statusEl.textContent = "Finished pose detection, review frames below.";
 }
